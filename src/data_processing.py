@@ -20,3 +20,35 @@ def fetch_metrics(prom_url, start_time, end_time, step = '1m'):
     return data
 
 # Process and combine metrics data
+
+def process_data(metrics_data):
+    """Process and combine metrics"""
+    
+    dfs = []
+    
+    for metric, data in metrics_data.items():
+        if data and data[0]['values']:
+            df = pd.DataFrame(data[0]['values'], columns = ['timestamp', metric])
+            try:
+                df[metric] = pd.to_numeric(df[metric], errors='coerce')
+                
+            except ValueError as e:
+                print(f"Error converting {metric} to numeric: {e}")
+                print(f"Problematic data: {df[metric].head()}")
+                continue
+            
+            dfs.append(df)
+            
+        if not dfs:
+            return pd.DataFrame()
+        
+        df = dfs[0]
+        
+        for other_df in dfs[1:]:
+            df = df.merge(other_df, on='timestamp', how='outer')
+            
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+        df.set_index('timestamp', inplace=True)
+        
+        return df
+    
