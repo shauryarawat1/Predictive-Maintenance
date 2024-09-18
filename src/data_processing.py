@@ -52,3 +52,19 @@ def process_data(metrics_data):
         
         return df
     
+# Perform basic analysis of data
+def analyze_data(df):
+    
+    if df.empty:
+        return "No data available for analysis"
+    
+    analysis = {
+        'cpu_usage_mean': df['cpu_usage_percent'].mean(),
+        'memory_usage_mean': df['memory_usage_percent'].mean(),
+        'disk_usage_mean': df['disk_usage_percent'].mean(),
+        'cpu_usage_max': df['cpu_usage_percent'].max(),
+        'memory_usage_max': df['memory_usage_percent'].max(),
+        'disk_usage_max': df['disk_usage_percent'].max(),
+    }
+    
+    return analysis
