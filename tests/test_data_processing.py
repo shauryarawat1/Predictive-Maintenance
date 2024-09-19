@@ -1,5 +1,6 @@
 import pytest
 import pandas as pd
+import numpy as np
 from unittest.mock import patch, MagicMock
 from src.data_processing import fetch_metrics, process_data, analyze_data
 
@@ -9,6 +10,14 @@ def mock_prometheus_data():
         'cpu_usage_percent': [{'values': [['1622505600', '50'], ['1622505660', '55']]}],
         'memory_usage_percent': [{'values': [['1622505600', '60'], ['1622505660', '65']]}],
         'disk_usage_percent': [{'values': [['1622505600', '70'], ['1622505660', '75']]}]
+    }
+
+@pytest.fixture
+def mock_prometheus_data_string_timestamp():
+    return {
+        'cpu_usage_percent': [{'values': [['2021-06-01 00:00:00', '50'], ['2021-06-01 00:01:00', '55']]}],
+        'memory_usage_percent': [{'values': [['2021-06-01 00:00:00', '60'], ['2021-06-01 00:01:00', '65']]}],
+        'disk_usage_percent': [{'values': [['2021-06-01 00:00:00', '70'], ['2021-06-01 00:01:00', '75']]}]
     }
 
 def test_fetch_metrics():
@@ -21,10 +30,32 @@ def test_fetch_metrics():
         
         assert len(result) == 3
         assert all(metric in result for metric in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent'])
-        mock_prom.custom_query_range.assert_called()
+        assert mock_prom.custom_query_range.call_count == 3
 
 def test_process_data(mock_prometheus_data):
     df = process_data(mock_prometheus_data)
+    
+    assert len(df) == 2
+    assert all(col in df.columns for col in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent'])
+    assert df.index.name == 'timestamp'
+    assert df['cpu_usage_percent'].dtype == float
+    assert df['memory_usage_percent'].dtype == float
+    assert df['disk_usage_percent'].dtype == float
+    assert pd.api.types.is_datetime64_any_dtype(df.index)
+
+def test_process_data_string_timestamp(mock_prometheus_data_string_timestamp):
+    df = process_data(mock_prometheus_data_string_timestamp)
+    
+    assert len(df) == 2
+    assert all(col in df.columns for col in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent'])
+    assert df.index.name == 'timestamp'
+    assert df['cpu_usage_percent'].dtype == float
+    assert df['memory_usage_percent'].dtype == float
+    assert df['disk_usage_percent'].dtype == float
+    assert pd.api.types.is_datetime64_any_dtype(df.index)
+
+def test_process_data_string_timestamp(mock_prometheus_data_string_timestamp):
+    df = process_data(mock_prometheus_data_string_timestamp)
     
     assert len(df) == 2
     assert all(col in df.columns for col in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent'])
@@ -48,8 +79,8 @@ def test_analyze_data():
     assert 'cpu_usage_percent_max' in analysis
     assert 'memory_usage_percent_max' in analysis
     assert 'disk_usage_percent_max' in analysis
-    assert analysis['cpu_usage_percent_mean'] == 60.0
-    assert analysis['cpu_usage_percent_max'] == 70.0
+    assert np.isclose(analysis['cpu_usage_percent_mean'], 60.0)
+    assert np.isclose(analysis['cpu_usage_percent_max'], 70.0)
 
 def test_analyze_data_empty():
     df = pd.DataFrame()
