@@ -1,70 +1,43 @@
 import pandas as pd
-from prometheus_api_client import PrometheusConnect
-
-# Fetch metrics from Prometheus
-def fetch_metrics(prom_url, start_time, end_time, step = '1m'):
-    prom = PrometheusConnect(url = prom_url, disable_ssl = True)
-    
-    metrics = ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent']
-    
-    data = {}
-    
-    for metric in metrics:
-        data[metric] = prom.custom_query_range(
-            query= metric,
-            start_time= start_time,
-            end_time= end_time,
-            step= step
-        )
-        
-    return data
-
-# Process and combine metrics data
+import numpy as np
 
 def process_data(metrics_data):
-    """Process and combine metrics"""
-    
+    """Process and combine metrics data"""
     dfs = []
-    
     for metric, data in metrics_data.items():
         if data and data[0]['values']:
-            df = pd.DataFrame(data[0]['values'], columns = ['timestamp', metric])
-            try:
-                df[metric] = pd.to_numeric(df[metric], errors='coerce')
-                
-            except ValueError as e:
-                print(f"Error converting {metric} to numeric: {e}")
-                print(f"Problematic data: {df[metric].head()}")
-                continue
-            
+            df = pd.DataFrame(data[0]['values'], columns=['timestamp', metric])
+            df[metric] = pd.to_numeric(df[metric], errors='coerce')
             dfs.append(df)
-            
-        if not dfs:
-            return pd.DataFrame()
-        
-        df = dfs[0]
-        
-        for other_df in dfs[1:]:
-            df = df.merge(other_df, on='timestamp', how='outer')
-            
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-        df.set_index('timestamp', inplace=True)
-        
-        return df
     
-# Perform basic analysis of data
+    if not dfs:
+        return pd.DataFrame()
+    
+    df = dfs[0]
+    for other_df in dfs[1:]:
+        df = df.merge(other_df, on='timestamp', how='outer')
+    
+    # Convert timestamp to datetime, handling both string and numeric formats
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s', errors='coerce')
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+    df.set_index('timestamp', inplace=True)
+    df = df.sort_index()  # Ensure the index is sorted
+    
+    # Ensure all metrics are present, even if they're all NaN
+    for metric in metrics_data.keys():
+        if metric not in df.columns:
+            df[metric] = np.nan
+    
+    return df
+
 def analyze_data(df):
-    
+    """Perform basic analysis on the data"""
     if df.empty:
-        return "No data available for analysis"
+        return "No data available for analysis."
     
-    analysis = {
-        'cpu_usage_mean': df['cpu_usage_percent'].mean(),
-        'memory_usage_mean': df['memory_usage_percent'].mean(),
-        'disk_usage_mean': df['disk_usage_percent'].mean(),
-        'cpu_usage_max': df['cpu_usage_percent'].max(),
-        'memory_usage_max': df['memory_usage_percent'].max(),
-        'disk_usage_max': df['disk_usage_percent'].max(),
-    }
+    analysis = {}
+    for column in df.columns:
+        analysis[f'{column}_mean'] = df[column].mean()
+        analysis[f'{column}_max'] = df[column].max()
     
     return analysis
