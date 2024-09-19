@@ -21,3 +21,14 @@ def test_collect_metrics(mock_psutil):
         mock_cpu_set.assert_called_once_with(50.0)
         mock_memory_set.assert_called_once_with(60.0)
         mock_disk_set.assert_called_once_with(70.0)
+        
+def test_metrics_server():
+    with patch('src.data_collection.start_http_server') as mock_start_server, \
+        patch('src.data_collection.collect_metrics') as mock_collect_metrics, \
+        patch('src.data_collection.time.sleep', side_effect = InterruptedError):
+            
+        with pytest.raises(InterruptedError):
+            run_metrics_server(8000)
+            
+        mock_start_server.assert_called_once_with(8000)
+        mock_collect_metrics.assert_called_once()
