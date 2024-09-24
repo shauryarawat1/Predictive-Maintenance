@@ -3,6 +3,7 @@ from sqlalchemy import create_engine, Column, Integer, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from src.config import DATABASE_URL
+import pandas as pd
 
 Base = declarative_base()
 
@@ -15,3 +16,43 @@ class SystemMetrics(Base):
     cpu_usage = Column(Float)
     memory_usage = Column(Float)
     disk_usage = Column(Float)
+    
+# Set up database connection
+engine = create_engine(DATABASE_URL)
+
+# Creates table if does not exist before
+Base.metadata.create_all(engine)
+
+# Factory for database connections
+Session = sessionmaker(bind=engine)
+
+def store_metrics(df):
+    # Store the processed metrics in the database
+    
+    # Create new database session
+    session = Session()
+    
+    try:
+        # Iterate over each row in dataframe
+        for _, row in df.iterrows():
+            
+            # Create new object for each row
+            metric = SystemMetrics(
+                timestamp = row.name,
+                cpu_usage = row["cpu_usage_percent"],
+                memory_usage = row["memory_usage_percent"],
+                disk_usage = row["disk_usage_percent"]
+            )
+            
+            session.add(metric)
+            
+        # Save the data
+        session.commit()
+        
+    except Exception as e:
+        session.rollback()
+        raise e
+    
+    finally:
+        session.close()
+        
