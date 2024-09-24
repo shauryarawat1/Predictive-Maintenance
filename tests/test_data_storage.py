@@ -24,3 +24,18 @@ def test_db():
     # Clean up
     session.close()
     Base.metadata.drop_all(engine)
+    
+def test_store_metrics(test_db):
+    # Create sample dataframe
+    df = pd.DataFrame({
+        "cpu_usage_percent": [50.0, 60.0],
+        "memory_usage_percent": [70.0, 80.0],
+        "disk_usage_percent": [30.0, 40.0]
+    }, index = pd.date_range('2021-06-01', periods = 2, freq = 'min'))
+    
+    # Store the metrics
+    store_metrics(df)
+    
+    # Verify that metrics are stored
+    stored_metrics = test_db.query(SystemMetrics).all()
+    assert len(stored_metrics) == 2
