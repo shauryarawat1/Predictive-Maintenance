@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import multiprocessing
 from src.data_collection import run_metrics_server
 from src.data_processing import fetch_metrics, process_data, analyze_data
+from src.data_storage import store_metrics
 from src.config import PROMETHEUS_URL, PROMETHEUS_PORT, COLLECTION_INTERVAL
 
 def main():
@@ -15,29 +16,33 @@ def main():
     # Wait for server to start
     time.sleep(5)
     
-    print("Collecting data for 1 minute...")
-    # Collect data for 1 minute
-    time.sleep(60)
+    print("Collecting and storing data for 1 minute...")
+    start_time = datetime.now()
+    end_time = start_time + timedelta(minutes = 1)
     
-    # Fetch and process data
-    end_time = datetime.now()
-    start_time = end_time - timedelta(minutes=1)
-    
-    metrics_data = fetch_metrics(PROMETHEUS_URL, start_time, end_time)
-    df = process_data(metrics_data)
-    
-    print("\nCollected data:")
-    print(df)
+    # Loop to collect data for 1 minute
+    while datetime.now() < end_time:
+        current_time = datetime.now()
+        
+        metrics_data = fetch_metrics(PROMETHEUS_URL, current_time - timedelta(seconds = 10), current_time)
+        df = process_data(metrics_data)
+        
+        # Save process data to database
+        store_metrics(df)
+        time.sleep(10)
+        
+    print("\nData Collection and storage completed")
     
     analysis_results = analyze_data(df)
-    print("\nData Analysis:")
+    
+    print("\nLast minute data analysis:")
     
     for key, value in analysis_results.items():
-        print(f"{key}:{value:.2f}")
+        print(f"{key}: {value:.2f}")
         
-    # Stop the metrics server
     server_process.terminate()
     server_process.join()
     
 if __name__ == "__main__":
     main()
+ 
