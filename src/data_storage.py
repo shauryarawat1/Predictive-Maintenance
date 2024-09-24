@@ -56,3 +56,20 @@ def store_metrics(df):
     finally:
         session.close()
         
+def get_metrics(start_time, end_time):
+    # Receive metrics from database within an interval
+    
+    session = Session()
+    
+    try:
+        
+        # Run a query in database to get metrics within the time range
+        metrics = session.query(SystemMetrics).filter(
+            SystemMetrics.timestamp.between(start_time, end_time)
+        ).all()
+        
+        return metrics
+    
+    finally:
+        session.close()
+        
