@@ -39,3 +39,28 @@ def test_store_metrics(test_db):
     # Verify that metrics are stored
     stored_metrics = test_db.query(SystemMetrics).all()
     assert len(stored_metrics) == 2
+    
+def test_get_metrics(test_db):
+    
+    # Add some test data
+    start_time = datetime.utcnow()
+    
+    for i in range(5):
+        metric = SystemMetrics(
+            timestamp = start_time + timedelta(minutes=1),
+            cpu_usage = 50.0 + i,
+            memory_usage = 60.0 + i,
+            disk_usage = 70.0 + i
+        )
+        
+        test_db.add(metric)
+        
+    test_db.commit()
+    
+    # Retrieve metrics
+    retrieved_metrics = get_metrics(start_time, start_time + timedelta(minutes = 10))
+    assert len(retrieved_metrics) == 5
+    
+    # Verify retrieved data
+    assert retrieved_metrics[0].cpu_usage == 50.0
+    assert retrieved_metrics[-1].cpu_usage == 54.0
