@@ -6,7 +6,8 @@ def fetch_metrics(prom_url, start_time, end_time, step='1m'):
     """Fetch metrics from Prometheus"""
     prom = PrometheusConnect(url=prom_url, disable_ssl=True)
     
-    metrics = ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent']
+    metrics = ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent',
+               'network_io_sent_bytes', 'network_io_recv_bytes', 'disk_io_read_bytes', 'disk_io_write_bytes']
     data = {}
     
     for metric in metrics:
@@ -41,10 +42,10 @@ def process_data(metrics_data):
     df.set_index('timestamp', inplace=True)
     df = df.sort_index()  # Ensure the index is sorted
     
-    # Ensure all metrics are present, even if they're all NaN
-    for metric in metrics_data.keys():
-        if metric not in df.columns:
-            df[metric] = np.nan
+    # Calculate rate of change for I/O metrics
+    for col in ['network_io_sent_bytes', 'network_io_recv_bytes', 'disk_io_read_bytes', 'disk_io_write_bytes']:
+        if col in df.columns:
+            df[f'{col}_rate'] = df[col].diff() / df.index.to_series().diff().dt.total_seconds()
     
     return df
 
