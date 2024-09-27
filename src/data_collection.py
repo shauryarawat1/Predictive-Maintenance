@@ -22,6 +22,16 @@ def collect_metrics():
     MEMORY_USAGE.set(psutil.virtual_memory().percent)
     DISK_USAGE.set(psutil.disk_usage('/').percent)
     
+    # Collect Network I/O metrics
+    net_io = psutil.net_io_counters()
+    NET_IO_SENT.set(net_io.bytes_sent)
+    NET_IO_RECV.set(net_io.bytes_recv)
+    
+    # Collect Disk I/O metrics
+    disk_io = psutil.disk_io_counters()
+    DISK_IO_READ.set(disk_io.read_bytes)
+    DISK_IO_WRITE.set(disk_io.write_bytes)
+    
 # Starts Prometheus server to run metrics
 def run_metrics_server(port):
     """Run the metrics collection server"""
