@@ -8,6 +8,12 @@ CPU_USAGE = Gauge('cpu_usage_percent', 'CPU usage in percent')
 MEMORY_USAGE = Gauge('memory_usage_percent', 'Memory usage in percent')
 DISK_USAGE = Gauge('disk_usage_percent', 'Disk usage in percent')
 
+# More metrics
+NET_IO_SENT = Gauge('network_io_sent_bytes', 'Network I/O bytes sent')
+NET_IO_RECV = Gauge('network_io_recv_bytes', 'Network I/O bytes received')
+DISK_IO_READ = Gauge('disk_io_read_bytes', 'Disk I/O bytes read')
+DISK_IO_WRITE = Gauge('disk_io_write_bytes', 'Disk I/O bytes written')
+
 # Using psutil to collect the metrics from the system
 def collect_metrics():
     """Collect actual system metrics"""
