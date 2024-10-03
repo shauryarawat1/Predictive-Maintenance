@@ -33,4 +33,19 @@ def test_engineer_features(sample_df):
     assert (df_engineered['hour_of_day'] == df_engineered.index.hour).all()
     assert (df_engineered['day_of_week'] == df_engineered.index.dayofweek).all()
     
+    # Check that ratios are calculated correctly
+    np.testing.assert_almost_equal(
+        df_engineered['memory_cpu_ratio'],
+        sample_df['memory_usage_percent'] / sample_df['cpu_usage_percent']
+    )
     
+    # Check that rolling averages are calculated correctly
+    np.testing.assert_almost_equal(
+        df_engineered['cpu_usage_percent_rolling_avg_5m'],
+        sample_df['cpu_usage_percent'].rolling(window = '5T').mean()
+    )
+    
+def test_engineer_features_empty_df():
+    empty_df = pd.DataFrame()
+    df_engineered = engineer_features(empty_df)
+    assert df_engineered.empty
