@@ -2,7 +2,7 @@ import time
 from datetime import datetime, timedelta
 import multiprocessing
 from src.data_collection import run_metrics_server
-from src.data_processing import fetch_metrics, process_data, analyze_data
+from src.data_processing import fetch_metrics, process_data, analyze_data, engineer_features
 from src.data_storage import store_metrics
 from src.config import PROMETHEUS_URL, PROMETHEUS_PORT, COLLECTION_INTERVAL
 
@@ -27,13 +27,15 @@ def main():
         metrics_data = fetch_metrics(PROMETHEUS_URL, current_time - timedelta(seconds = 10), current_time)
         df = process_data(metrics_data)
         
+        df_engineered = engineer_features(df)
+        
         # Save process data to database
         store_metrics(df)
         time.sleep(10)
         
     print("\nData Collection and storage completed")
     
-    analysis_results = analyze_data(df)
+    analysis_results = analyze_data(df_engineered)
     
     print("\nLast minute data analysis:")
     
