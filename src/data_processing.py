@@ -26,7 +26,7 @@ def process_data(metrics_data):
     for metric, data in metrics_data.items():
         if data and data[0]['values']:
             df = pd.DataFrame(data[0]['values'], columns=['timestamp', metric])
-            df[metric] = pd.to_numeric(df[metric], errors='coerce') # Explicitly convert to float
+            df[metric] = pd.to_numeric(df[metric], errors='coerce').astype(float) # Explicitly convert to float
             dfs.append(df)
     
     if not dfs:
@@ -64,14 +64,17 @@ def analyze_data(df):
 def engineer_features(df):
     # Engineer additional features from existing metrics"
     
+    if df.empty:
+        return df
+    
     # Rolling averages
     for col in df.columns:
-        df[f'{col}_rolling_avg_5m'] = df[col].rolling(window = '5T').mean()
-        df[f'{col}_rolling_avg_15m'] = df[col].rolling(window = '15T').mean()
+        df[f'{col}_rolling_avg_5m'] = df[col].rolling(window = '5min').mean()
+        df[f'{col}_rolling_avg_15m'] = df[col].rolling(window = '15min').mean()
         
     # Rate of change
     for col in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent']:
-        df[f'{col}_rate_of_change'] = df[col].diff() / df.index_to_series().diff().dt.total_seconds()
+        df[f'{col}_rate_of_change'] = df[col].diff() / df.index.to_series().diff().dt.total_seconds()
         
     # Ratios
     df['memory_cpu_ratio'] = df['memory_usage_percent'] / df['cpu_usage_percent']
