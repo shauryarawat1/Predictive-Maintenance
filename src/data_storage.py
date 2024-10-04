@@ -46,18 +46,18 @@ def store_metrics(df):
             
             # Create new object for each row
             metric = SystemMetrics(
-                timestamp = row.name,
-                cpu_usage = row["cpu_usage_percent"],
-                memory_usage = row["memory_usage_percent"],
-                disk_usage = row["disk_usage_percent"],
-                network_io_sent=row.get('network_io_sent_bytes'),
-                network_io_recv=row.get('network_io_recv_bytes'),
-                disk_io_read=row.get('disk_io_read_bytes'),
-                disk_io_write=row.get('disk_io_write_bytes'),
-                network_io_sent_rate=row.get('network_io_sent_bytes_rate'),
-                network_io_recv_rate=row.get('network_io_recv_bytes_rate'),
-                disk_io_read_rate=row.get('disk_io_read_bytes_rate'),
-                disk_io_write_rate=row.get('disk_io_write_bytes_rate')
+                timestamp=row.name,
+                cpu_usage=float(row.get('cpu_usage_percent')),
+                memory_usage=float(row.get('memory_usage_percent')),
+                disk_usage=float(row.get('disk_usage_percent')),
+                network_io_sent=float(row.get('network_io_sent_bytes')),
+                network_io_recv=float(row.get('network_io_recv_bytes')),
+                disk_io_read=float(row.get('disk_io_read_bytes')),
+                disk_io_write=float(row.get('disk_io_write_bytes')),
+                network_io_sent_rate=float(row.get('network_io_sent_bytes_rate')),
+                network_io_recv_rate=float(row.get('network_io_recv_bytes_rate')),
+                disk_io_read_rate=float(row.get('disk_io_read_bytes_rate')),
+                disk_io_write_rate=float(row.get('disk_io_write_bytes_rate'))
             )
             
             session.add(metric)

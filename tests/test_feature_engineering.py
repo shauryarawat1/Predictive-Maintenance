@@ -45,19 +45,29 @@ def test_engineer_features(sample_df):
         sample_df['cpu_usage_percent'].rolling(window = '5T').mean()
     )
     
+
+    
     pd.testing.assert_series_equal(
         df_engineered['memory_cpu_ratio'],
         sample_df['memory_usage_percent'] / sample_df['cpu_usage_percent'],
-        check_names = False
+        check_names=False,
+        check_exact=False,
+        rtol=1e-5
     )
     
     pd.testing.assert_series_equal(
         df_engineered['cpu_usage_percent_rolling_avg_5m'],
         sample_df['cpu_usage_percent'].rolling(window='5min').mean(),
-        check_names=False
+        check_names=False,
+        check_exact=False,
+        rtol=1e-5
     )
     
 def test_engineer_features_empty_df():
-    empty_df = pd.DataFrame()
-    df_engineered = engineer_features(empty_df)
-    assert df_engineered.empty
+    pd.testing.assert_series_equal(
+        df_engineered['cpu_usage_percent_rolling_avg_5m'],
+        sample_df['cpu_usage_percent'].rolling(window='5min').mean(),
+        check_names=False,
+        check_exact=False,
+        rtol=1e-5
+    )
