@@ -10,15 +10,25 @@ import uuid
 @pytest.fixture(scope="module")
 def test_db():
     test_db_name = f"test_db_{uuid.uuid4().hex}"
+    test_db_url = f"{DATABASE_URL.rsplit('/', 1)[0]}/postgres"
+    engine = create_engine(test_db_url)
+    with engine.connect() as conn:
+        conn.execute(text("COMMIT"))
+        conn.execute(text(f"CREATE DATABASE {test_db_name}"))
+    
     test_db_url = f"{DATABASE_URL.rsplit('/', 1)[0]}/{test_db_name}"
     engine = create_engine(test_db_url)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
+    
     yield session
+    
     session.close()
     engine.dispose()
-    with create_engine(DATABASE_URL.rsplit('/', 1)[0] + '/postgres').connect() as conn:
+    
+    with create_engine(f"{DATABASE_URL.rsplit('/', 1)[0]}/postgres").connect() as conn:
+        conn.execute(text("COMMIT"))
         conn.execute(text(f"DROP DATABASE IF EXISTS {test_db_name}"))
 
 def test_store_metrics(test_db):

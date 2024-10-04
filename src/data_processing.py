@@ -67,6 +67,9 @@ def engineer_features(df):
     if df.empty:
         return df
     
+    df = df.copy()
+    df.index.name = "timestamp"
+    
     # Rolling averages
     for col in df.columns:
         df[f'{col}_rolling_avg_5m'] = df[col].rolling(window = '5min').mean()
