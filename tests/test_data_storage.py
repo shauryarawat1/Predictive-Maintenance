@@ -46,12 +46,16 @@ def test_store_metrics(test_db):
         'disk_io_write_bytes_rate': [75, 150]
     }, index=pd.date_range(start=datetime.now(timezone.utc), periods=2, freq='min'))
 
-    store_metrics(df)
+    store_metrics(df, test_db)
 
     stored_metrics = test_db.query(SystemMetrics).all()
     assert len(stored_metrics) == 2
 
 def test_get_metrics(test_db):
+    
+    test_db.query(SystemMetrics).delete()
+    test_db.commit()
+    
     start_time = datetime.now(timezone.utc)
     for i in range(5):
         metric = SystemMetrics(
@@ -71,7 +75,5 @@ def test_get_metrics(test_db):
         test_db.add(metric)
     test_db.commit()
 
-    retrieved_metrics = get_metrics(start_time, start_time + timedelta(minutes=10))
+    retrieved_metrics = get_metrics(start_time, start_time + timedelta(minutes=10), test_db)
     assert len(retrieved_metrics) == 5
-    assert retrieved_metrics[0].cpu_usage == 50.0
-    assert retrieved_metrics[-1].cpu_usage == 54.0

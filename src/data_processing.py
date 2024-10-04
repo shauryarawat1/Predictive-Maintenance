@@ -87,7 +87,7 @@ def engineer_features(df):
 
     # Lag features
     for col in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent']:
-        df[f'{col}_lag_5m'] = df[col].shift(periods=5)
-        df[f'{col}_lag_15m'] = df[col].shift(periods=15)
+        df[f'{col}_lag_5m'] = df[col].shift(periods=1)
+        df[f'{col}_lag_15m'] = df[col].shift(periods=3)
 
     return df

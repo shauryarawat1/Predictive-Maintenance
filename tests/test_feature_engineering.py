@@ -2,6 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from src.data_processing import engineer_features
+from pandas.testing import assert_series_equal
 
 @pytest.fixture
 def sample_df():
@@ -34,40 +35,26 @@ def test_engineer_features(sample_df):
     assert (df_engineered['day_of_week'] == df_engineered.index.dayofweek).all()
     
     # Check that ratios are calculated correctly
-    np.testing.assert_almost_equal(
+    expected_ratio = sample_df['memory_usage_percent'] / sample_df['cpu_usage_percent']
+    assert_series_equal(
         df_engineered['memory_cpu_ratio'],
-        sample_df['memory_usage_percent'] / sample_df['cpu_usage_percent']
-    )
-    
-    # Check that rolling averages are calculated correctly
-    np.testing.assert_almost_equal(
-        df_engineered['cpu_usage_percent_rolling_avg_5m'],
-        sample_df['cpu_usage_percent'].rolling(window = '5T').mean()
-    )
-    
-
-    
-    pd.testing.assert_series_equal(
-        df_engineered['memory_cpu_ratio'],
-        sample_df['memory_usage_percent'] / sample_df['cpu_usage_percent'],
+        expected_ratio,
         check_names=False,
         check_exact=False,
         rtol=1e-5
     )
-    
-    pd.testing.assert_series_equal(
+
+    # Check that rolling averages are calculated correctly
+    expected_rolling_avg = sample_df['cpu_usage_percent'].rolling(window='5min').mean()
+    assert_series_equal(
         df_engineered['cpu_usage_percent_rolling_avg_5m'],
-        sample_df['cpu_usage_percent'].rolling(window='5min').mean(),
+        expected_rolling_avg,
         check_names=False,
         check_exact=False,
         rtol=1e-5
     )
     
 def test_engineer_features_empty_df():
-    pd.testing.assert_series_equal(
-        df_engineered['cpu_usage_percent_rolling_avg_5m'],
-        sample_df['cpu_usage_percent'].rolling(window='5min').mean(),
-        check_names=False,
-        check_exact=False,
-        rtol=1e-5
-    )
+    empty_df = pd.DataFrame()
+    df_engineered = engineer_features(empty_df)
+    assert df_engineered.empty

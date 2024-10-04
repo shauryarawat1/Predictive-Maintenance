@@ -34,58 +34,47 @@ Base.metadata.create_all(engine)
 # Factory for database connections
 Session = sessionmaker(bind=engine)
 
-def store_metrics(df):
-    # Store the processed metrics in the database
-    
-    # Create new database session
-    session = Session()
-    
+def store_metrics(df, session=None):
+    close_session = False
+    if session is None:
+        session = Session()
+        close_session = True
     try:
-        # Iterate over each row in dataframe
-        for _, row in df.iterrows():
-            
-            # Create new object for each row
+        for index, row in df.iterrows():
             metric = SystemMetrics(
-                timestamp=row.name,
-                cpu_usage=float(row.get('cpu_usage_percent')),
-                memory_usage=float(row.get('memory_usage_percent')),
-                disk_usage=float(row.get('disk_usage_percent')),
-                network_io_sent=float(row.get('network_io_sent_bytes')),
-                network_io_recv=float(row.get('network_io_recv_bytes')),
-                disk_io_read=float(row.get('disk_io_read_bytes')),
-                disk_io_write=float(row.get('disk_io_write_bytes')),
-                network_io_sent_rate=float(row.get('network_io_sent_bytes_rate')),
-                network_io_recv_rate=float(row.get('network_io_recv_bytes_rate')),
-                disk_io_read_rate=float(row.get('disk_io_read_bytes_rate')),
-                disk_io_write_rate=float(row.get('disk_io_write_bytes_rate'))
+                timestamp=index,
+                cpu_usage=float(row['cpu_usage_percent']),
+                memory_usage=float(row['memory_usage_percent']),
+                disk_usage=float(row['disk_usage_percent']),
+                network_io_sent=float(row['network_io_sent_bytes']),
+                network_io_recv=float(row['network_io_recv_bytes']),
+                disk_io_read=float(row['disk_io_read_bytes']),
+                disk_io_write=float(row['disk_io_write_bytes']),
+                network_io_sent_rate=float(row['network_io_sent_bytes_rate']),
+                network_io_recv_rate=float(row['network_io_recv_bytes_rate']),
+                disk_io_read_rate=float(row['disk_io_read_bytes_rate']),
+                disk_io_write_rate=float(row['disk_io_write_bytes_rate'])
             )
-            
             session.add(metric)
-            
-        # Save the data
         session.commit()
-        
     except Exception as e:
         session.rollback()
         raise e
-    
     finally:
-        session.close()
+        if close_session:
+            session.close()
         
-def get_metrics(start_time, end_time):
-    # Receive metrics from database within an interval
-    
-    session = Session()
-    
+def get_metrics(start_time, end_time, session=None):
+    close_session = False
+    if session is None:
+        session = Session()
+        close_session = True
     try:
-        
-        # Run a query in database to get metrics within the time range
         metrics = session.query(SystemMetrics).filter(
             SystemMetrics.timestamp.between(start_time, end_time)
         ).all()
-        
         return metrics
-    
     finally:
-        session.close()
+        if close_session:
+            session.close()
         
