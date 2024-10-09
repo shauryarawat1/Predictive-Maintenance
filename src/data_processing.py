@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from prometheus_api_client import PrometheusConnect
+from src.anomaly_detection import add_anomaly_flags
 
 def fetch_metrics(prom_url, start_time, end_time, step='1m'):
     """Fetch metrics from Prometheus"""
@@ -91,3 +92,13 @@ def engineer_features(df):
         df[f'{col}_lag_15m'] = df[col].shift(periods=3)
 
     return df
+
+def process_and_analyze_data(df):
+    
+    # Process, engineer features and detect anomalies in data
+    
+    df_processed = process_data(df)
+    df_engineered = engineer_features(df_processed)
+    df_with_anomalies = add_anomaly_flags(df_engineered)
+    
+    return df_with_anomalies
