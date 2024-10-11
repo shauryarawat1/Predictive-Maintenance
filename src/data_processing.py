@@ -1,105 +1,100 @@
+# src/data_processing.py
+
 import pandas as pd
 import numpy as np
-from prometheus_api_client import PrometheusConnect
-from src.anomaly_detection import add_anomaly_flags
 
-def fetch_metrics(prom_url, start_time, end_time, step='1m'):
-    """Fetch metrics from Prometheus"""
-    prom = PrometheusConnect(url=prom_url, disable_ssl=True)
+def process_data(df):
+    """
+    Process the input dataframe.
     
-    metrics = ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent',
-               'network_io_sent_bytes', 'network_io_recv_bytes', 'disk_io_read_bytes', 'disk_io_write_bytes']
-    data = {}
+    Args:
+    df (pd.DataFrame): Input dataframe with raw metrics
     
-    for metric in metrics:
-        data[metric] = prom.custom_query_range(
-            query=metric,
-            start_time=start_time,
-            end_time=end_time,
-            step=step
-        )
-    
-    return data
-
-def process_data(metrics_data):
-    """Process and combine metrics data"""
-    dfs = []
-    for metric, data in metrics_data.items():
-        if data and data[0]['values']:
-            df = pd.DataFrame(data[0]['values'], columns=['timestamp', metric])
-            df[metric] = pd.to_numeric(df[metric], errors='coerce').astype(float) # Explicitly convert to float
-            dfs.append(df)
-    
-    if not dfs:
+    Returns:
+    pd.DataFrame: Processed dataframe
+    """
+    # Ensure the dataframe is not empty
+    if df.empty:
         return pd.DataFrame()
     
-    df = dfs[0]
-    for other_df in dfs[1:]:
-        df = df.merge(other_df, on='timestamp', how='outer')
+    # Perform any necessary processing here
+    df = df.copy()
     
-    # Convert timestamp to datetime, handling both string and numeric formats
-    df['timestamp'] = pd.to_datetime(pd.to_numeric(df['timestamp'], errors='coerce'), unit='s', errors='coerce')
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
-    df.set_index('timestamp', inplace=True)
-    df = df.sort_index()  # Ensure the index is sorted
+    # Remove any rows with negative values (assuming these are invalid)
+    df = df[(df >= 0).all(axis=1)]
     
-    # Calculate rate of change for I/O metrics
-    for col in ['network_io_sent_bytes', 'network_io_recv_bytes', 'disk_io_read_bytes', 'disk_io_write_bytes']:
-        if col in df.columns:
-            df[f'{col}_rate'] = df[col].diff() / df.index.to_series().diff().dt.total_seconds()
+    # Cap values at 100 (assuming these are percentages)
+    df = df.clip(upper=100)
+    
+    # Handle NaN values
+    df = df.fillna(df.mean())
     
     return df
-
-def analyze_data(df):
-    """Perform basic analysis on the data"""
-    if df.empty:
-        return "No data available for analysis."
-    
-    analysis = {}
-    for column in df.columns:
-        analysis[f'{column}_mean'] = df[column].mean()
-        analysis[f'{column}_max'] = df[column].max()
-    
-    return analysis
 
 def engineer_features(df):
-    if df.empty:
-        return df
+    """
+    Engineer additional features from the processed data.
     
+    Args:
+    df (pd.DataFrame): Processed dataframe
+    
+    Returns:
+    pd.DataFrame: Dataframe with engineered features
+    """
     df = df.copy()
-    df.index.name = 'timestamp'
     
-    # Rolling averages
-    for col in df.columns:
-        df[f'{col}_rolling_avg_5m'] = df[col].rolling(window='5min').mean()
-        df[f'{col}_rolling_avg_15m'] = df[col].rolling(window='15min').mean()
-
-    # Rate of change
-    for col in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent']:
-        df[f'{col}_rate_of_change'] = df[col].diff() / df.index.to_series().diff().dt.total_seconds()
-
-    # Ratios
-    df['memory_cpu_ratio'] = df['memory_usage_percent'] / df['cpu_usage_percent']
-    df['disk_cpu_ratio'] = df['disk_usage_percent'] / df['cpu_usage_percent']
-
-    # Time-based features
+    # Add rolling averages
+    for column in df.columns:
+        df[f'{column}_rolling_avg_5min'] = df[column].rolling(window='5min').mean()
+        df[f'{column}_rolling_avg_1hour'] = df[column].rolling(window='1H').mean()
+    
+    # Add rate of change (percentage change)
+    for column in df.columns:
+        df[f'{column}_rate_of_change'] = df[column].pct_change()
+    
+    # Add time-based features
     df['hour_of_day'] = df.index.hour
     df['day_of_week'] = df.index.dayofweek
-
-
-    # Lag features
-    for col in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent']:
-        df[f'{col}_lag_5m'] = df[col].shift(periods=1)
-        df[f'{col}_lag_15m'] = df[col].shift(periods=3)
-
+    
+    # Add lag features
+    for column in df.columns:
+        df[f'{column}_lag_5min'] = df[column].shift(periods=5)
+        df[f'{column}_lag_1hour'] = df[column].shift(periods=60)
+    
     return df
 
+def calculate_statistics(df):
+    """
+    Calculate various statistics for the dataframe.
+    
+    Args:
+    df (pd.DataFrame): Input dataframe
+    
+    Returns:
+    dict: Dictionary of calculated statistics
+    """
+    stats = {}
+    for column in df.columns:
+        stats[f'{column}_mean'] = df[column].mean()
+        stats[f'{column}_median'] = df[column].median()
+        stats[f'{column}_std'] = df[column].std()
+        stats[f'{column}_min'] = df[column].min()
+        stats[f'{column}_max'] = df[column].max()
+    
+    return stats
+
 def process_and_analyze_data(df):
-    
-    # Process, engineer features and detect anomalies in data
-    
+    """
+    Process, engineer features, and analyze the data.
+
+    Args:
+    df (pd.DataFrame): Raw input dataframe
+
+    Returns:
+    tuple: (Processed dataframe with engineered features, Dictionary of statistics)
+    """
     df_processed = process_data(df)
     df_engineered = engineer_features(df_processed)
-    df_with_anomalies = add_anomaly_flags(df_engineered)
+    stats = calculate_statistics(df_engineered)
     
-    return df_with_anomalies
+    return df_engineered, stats
