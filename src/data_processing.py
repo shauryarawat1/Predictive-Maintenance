@@ -86,6 +86,7 @@ def engineer_features(df):
     df['hour_of_day'] = df.index.hour
     df['day_of_week'] = df.index.dayofweek
 
+
     # Lag features
     for col in ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent']:
         df[f'{col}_lag_5m'] = df[col].shift(periods=1)
