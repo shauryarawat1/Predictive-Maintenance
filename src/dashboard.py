@@ -33,3 +33,21 @@ def plot_metric(df, metric):
 def main():
     
     st.title("System Metrics Dashboard")
+    
+    df = load_data()
+    
+    st.write("## Overview")
+    st.write(f"Total data points: {len(df)}")
+    st.write(f"Anomalies detected: {df['is_anomaly'].sum()}")
+    
+    st.write("## Metrics Visualization")
+    metric = st.selectbox('Select a metric to visualize', ['cpu_usage_percent', 'memory_usage_percent', 'disk_usage_percent'])
+    
+    fig = plot_metric(df, metric)
+    st.pyplot(fig)
+    
+    st.write("## Raw Data")
+    st.dataframe(df)
+    
+if __name__ == "__main__":
+    main()
